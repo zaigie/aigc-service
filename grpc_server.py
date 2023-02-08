@@ -28,7 +28,7 @@ class Chat(chat_pb2_grpc.ChatServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_pb2_grpc.add_ChatServicer_to_server(Chat(), server)
-    server.add_insecure_port("[::]:10086")
+    server.add_insecure_port("[::]:9000")
     server.start()
     server.wait_for_termination()
 
