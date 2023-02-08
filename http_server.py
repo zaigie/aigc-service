@@ -29,11 +29,6 @@ API_KEY = os.environ.get("OPENAI_API_KEY")
 chatbot = Chatbot(api_key=API_KEY)
 
 
-@app.get("/")
-def index():
-    return {"message": "Hello World"}
-
-
 class Ask(BaseModel):
     prompt: str
 
