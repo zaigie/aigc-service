@@ -1,0 +1,14 @@
+syntax = "proto3";
+package chat;
+
+
+service Chat {
+  rpc Ask(askrequest) returns (stream askresponse){}
+}
+message askrequest {
+  string prompt = 1;
+  string conversation_id = 2;
+}
+message askresponse{
+  string response = 1;
+}
