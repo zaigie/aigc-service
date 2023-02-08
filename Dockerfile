@@ -11,7 +11,7 @@ RUN apt update && apt install make gcc g++ tzdata -y
 RUN python -m pip install --upgrade pip -i https://pypi.douban.com/simple
 
 COPY requirements.txt /app
-RUN cd /app && pip install -r requirements.txt -i https://pypi.douban.com/simple
+RUN cd /app && pip install -r requirements.txt
 RUN apt remove make gcc g++ -y
 
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
