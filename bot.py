@@ -85,7 +85,10 @@ class Chatbot:
                 break
             if response["choices"][0].get("text") is None:
                 raise Exception("ChatGPT API returned no text")
-            if response["choices"][0]["text"] == "<|im_end|>":
+            if (
+                response["choices"][0]["text"] == "<|im_end|>"
+                or response["choices"][0]["text"].strip() == "<|im"
+            ):
                 break
             yield response["choices"][0]["text"]
             full_response += response["choices"][0]["text"]
