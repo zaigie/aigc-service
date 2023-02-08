@@ -1,6 +1,18 @@
 # ChatGPT EasyBackend
 
-## How to use?
+## TODO
+
+- [ ] Log printing and collection
+- [ ] SSL/TLS Support
+- [ ] Use sqlite3 replace json file storage
+
+...
+
+## Prepare
+
+You need You need an OpenAI account and generate API keys: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
+
+## Deploy
 
 | ENV            | Description            | Required | Default                        |
 | -------------- | ---------------------- | -------- | ------------------------------ |
@@ -9,7 +21,8 @@
 | ENCODING_NAME  | tiktoken encoding name | False    | gpt2                           |
 | FIRST_PROMPT   | Your First Prompt      | False    | Hello                          |
 
-In general, we would use GPT_ENGINE as text-chat-davinci-002-20221122 and ENCODING_NAME as gpt2 as the default (this pairing is free).
+In general, we would use `GPT_ENGINE=text-chat-davinci-002-20221122` and `ENCODING_NAME=gpt2` as the default **(this pairing is free)**.
+
 However, due to the popularity of ChatGPT, these collocations are often disabled to indicate a "model does not exist" error, so the following collocations can be used:
 
 ```sh
@@ -29,10 +42,36 @@ docker run -d --name chatgpt-easy-backend \
 jokerwho/chatgpt-easy-backend:latest
 ```
 
-## Include Services
+## Use
 
-| Port | Service             | Type      |
-| ---- | ------------------- | --------- |
-| 8000 | FastAPI HTTP Server | No Stream |
-| 9000 | gRPC Server         | Stream    |
-| 9001 | Websocket Server    | Stream    |
+### Include Services
+
+| Port | Service          | Type      |
+| ---- | ---------------- | --------- |
+| 8000 | HTTP Server      | No Stream |
+| 9000 | gRPC Server      | Stream    |
+| 9001 | Websocket Server | Stream    |
+
+### HTTP
+
+HTTP server is using a FastAPI, you can visit [http://localhost:8000/docs](http://localhost:8000/docs) to SwaggerUI.
+
+or use the curl tool to request the interface
+
+```sh
+curl -X 'POST' \
+  'http://localhost:8000/ask/{conversation_id}' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "prompt": "Hello"
+}'
+```
+
+### gRPC
+
+Here is a sample program [grpc_client.py](https://github.com/jokerwho/chatgpt-easy-backend/blob/main/grpc_client.py)
+
+### Websocket
+
+Connect to `ws://localhost:9001` then send message.
