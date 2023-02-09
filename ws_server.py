@@ -20,13 +20,21 @@ def client_left(client, server):
 
 def message_received(client, server, message):
     # print("Client(%d) said: %s" % (client["id"], message))
-    lines = [line for line in message.splitlines() if line.strip()]
+    if not message.startswith("<|ask|>$"):
+        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$消息内容”为格式发送消息")
+        return
+    conversation_id = message.split("$")[1]
+    if not conversation_id:
+        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$消息内容”为格式发送消息")
+        return
+    prompt = message.split("$")[2]
+    lines = [line for line in prompt.splitlines() if line.strip()]
     user_input = "\n".join(lines)
     try:
         for response in chatbot.ask_stream(
             user_input,
             temperature=TEMPREATURE,
-            conversation_id=f"ws_{uuid.uuid4().hex[:8]}",
+            conversation_id=conversation_id,
         ):
             server.send_message(client, response)
         server.send_message(client, "<|end|>")
