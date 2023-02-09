@@ -29,6 +29,7 @@ def message_received(client, server, message):
             conversation_id=f"ws_{uuid.uuid4().hex[:8]}",
         ):
             server.send_message(client, response)
+        server.send_message(client, "<|end|>")
     except Exception as e:
         server.send_message(client, "<|err|>")
 
