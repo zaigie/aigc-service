@@ -37,10 +37,13 @@ class Ask(BaseModel):
 def chat(conversation_id: str, ask: Ask):
     lines = [line for line in ask.prompt.splitlines() if line.strip()]
     user_input = "\n".join(lines)
-    response = chatbot.ask(
-        user_input, conversation_id=conversation_id, temperature=TEMPREATURE
-    )
-    return response
+    try:
+        response = chatbot.ask(
+            user_input, conversation_id=conversation_id, temperature=TEMPREATURE
+        )
+        return response
+    except Exception as e:
+        return {"response": "访问人数过多，请重试。", "detail": str(e)}
 
 
 if __name__ == "__main__":

@@ -22,12 +22,15 @@ def message_received(client, server, message):
     # print("Client(%d) said: %s" % (client["id"], message))
     lines = [line for line in message.splitlines() if line.strip()]
     user_input = "\n".join(lines)
-    for response in chatbot.ask_stream(
-        user_input,
-        temperature=TEMPREATURE,
-        conversation_id=f"ws_{uuid.uuid4().hex[:8]}",
-    ):
-        server.send_message(client, response)
+    try:
+        for response in chatbot.ask_stream(
+            user_input,
+            temperature=TEMPREATURE,
+            conversation_id=f"ws_{uuid.uuid4().hex[:8]}",
+        ):
+            server.send_message(client, response)
+    except Exception as e:
+        server.send_message(client, "<|err|>")
 
 
 server = WebsocketServer(host="0.0.0.0", port=9001)

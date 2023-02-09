@@ -18,11 +18,14 @@ class Chat(chat_pb2_grpc.ChatServicer):
         conversation_id = request.conversation_id
         lines = [line for line in prompt.splitlines() if line.strip()]
         user_input = "\n".join(lines)
-        for response in chatbot.ask_stream(
-            user_input, temperature=TEMPREATURE, conversation_id=conversation_id
-        ):
-            yield chat_pb2.askresponse(response=response)
-        # print(context.is_active())
+        try:
+            for response in chatbot.ask_stream(
+                user_input, temperature=TEMPREATURE, conversation_id=conversation_id
+            ):
+                yield chat_pb2.askresponse(response=response)
+            # print(context.is_active())
+        except Exception as e:
+            yield chat_pb2.askresponse(response="<|err|>")
 
 
 def serve():
