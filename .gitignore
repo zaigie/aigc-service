@@ -1,3 +1,6 @@
 __pycache__
 conversations
 .env
+build/
+dist/
+grpc_client.spec
