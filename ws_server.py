@@ -1,9 +1,10 @@
 import os
-import uuid
+import time
 from websocket_server import WebsocketServer
 
 from bot import Chatbot
 
+RETRY = 3
 TEMPREATURE = 0.5
 API_KEY = os.environ.get("OPENAI_API_KEY")
 chatbot = Chatbot(api_key=API_KEY)
@@ -39,6 +40,19 @@ def message_received(client, server, message):
             server.send_message(client, response)
         server.send_message(client, "<|end|>")
     except Exception as e:
+        count_retry = 0
+        while count_retry < RETRY:
+            try:
+                for response in chatbot.ask_stream(
+                    user_input,
+                    temperature=TEMPREATURE,
+                    conversation_id=conversation_id,
+                ):
+                    server.send_message(client, response)
+                server.send_message(client, "<|end|>")
+                return
+            except Exception as e:
+                count_retry += 1
         server.send_message(client, "<|err|>")
 
 

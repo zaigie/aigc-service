@@ -36,6 +36,7 @@ class Chatbot:
         return openai.Completion.create(
             engine=self.engine,
             prompt=prompt,
+            timeout=30,
             temperature=temperature,
             max_tokens=get_max_tokens(prompt),
             stop=["\n\n\n"],
