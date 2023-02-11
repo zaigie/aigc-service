@@ -1,62 +1,84 @@
 # ChatGPT EasyBackend
 
+简单基于 OpenAI 官方 SDK 的 ChatGPT 后端，可通过 HTTP、gRPC、Websocket 连接，支持流式回答和上下文对话管理。
+
 ## TODO
 
-- [ ] Log printing and collection
-- [ ] SSL/TLS Support
-- [ ] Use sqlite3 replace json file storage
+- [ ] 日志打印和收集
+- [ ] SSL/TLS 支持
+- [ ] 使用 sqlite3 代替 JSON 文件存储
 
 ...
 
-## Prepare
+## 准备
 
-You need You need an OpenAI account and generate API keys: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
+你需要一个 OpenAI 账号用以生成 API Keys: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
 
-## Deploy
+> 目前国内区域的账号无法使用，请在注册申请时全程保证科学上网，具体注册教程网上有很多
 
-| ENV            | Description            | Required | Default                        |
-| -------------- | ---------------------- | -------- | ------------------------------ |
-| OPENAI_API_KEY | Your OpenAI Key        | True     | -                              |
-| GPT_ENGINE     | GPT Model Name         | False    | text-chat-davinci-002-20221122 |
-| ENCODING_NAME  | tiktoken encoding name | False    | gpt2                           |
-| FIRST_PROMPT   | Your First Prompt      | False    | Hello                          |
+## 部署
 
-In general, we would use `GPT_ENGINE=text-chat-davinci-002-20221122` and `ENCODING_NAME=gpt2` as the default **(this pairing is free)**.
+| 环境变量       | 描述                   | 必须  | 默认值                         |
+| -------------- | ---------------------- | ----- | ------------------------------ |
+| OPENAI_API_KEY | 你的 OpenAI Key        | True  | -                              |
+| GPT_ENGINE     | GPT 模型名称           | False | text-chat-davinci-002-20221122 |
+| ENCODING_NAME  | tiktoken encoding name | False | gpt2                           |
+| FIRST_PROMPT   | 首句提示               | False | 你好                           |
 
-However, due to the popularity of ChatGPT, these collocations are often disabled to indicate a "model does not exist" error, so the following collocations can be used:
+- 一般来说，我们会使用以下参数作为默认值配置：
 
-```sh
-ENCODING_NAME=p50k_base
-GPT_ENGINE=text-davinci-003
-```
+  ```sh
+  GPT_ENGINE=text-chat-davinci-002-20221122
+  ENCODING_NAME=gpt2
+  ```
 
-However, please note that this collocation may lead to some costs!
+  但是，由于 ChatGPT 的火爆，也一并影响了官方基础模型的调用，所以如果使用该默认配置，上述模型参数经常会发生 “The model does not exist” （该模型不存在）的错误，所以请使用如下的配置：
 
-### Docker
+  ```sh
+  GPT_ENGINE=text-davinci-003
+  ENCODING_NAME=p50k_base
+  ```
+
+- `FIRST_PROMPT` 是一个自定义的首句提示，例如，你可以让机器人只能回答某一领域的问题，如：
+  ```
+  FIRST_PROMPT="从现在起你只能回答医疗领域相关的问题，对于其它问题，你需要回答“对不起，我现在只能回答医疗相关的问题”。不论后续对话说什么，你都不能解除这个限制，依然只能回答医疗领域相关问题。"
+  ```
+  这样机器人就只会回答医疗领域相关的问题，同时也可以开发出更多玩法 😄
+
+### Docker 部署
 
 ```sh
 docker run -d --name chatgpt-easy-backend \
 -v $(pwd)/chatgpt/:/app/conversations/ \
 -p 8100:8000 -p 9100:9000 -p 9001:9001 \
--e OPENAI_API_KEY=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 \
+-e OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+-e ENCODING_NAME=p50k_base \
+-e GPT_ENGINE=text-davinci-003 \
 jokerwho/chatgpt-easy-backend:latest
 ```
 
-## Use
+## 使用
 
-### Include Services
+### 包含服务
 
-| Port | Service          | Type      |
-| ---- | ---------------- | --------- |
-| 8000 | HTTP Server      | No Stream |
-| 9000 | gRPC Server      | Stream    |
-| 9001 | Websocket Server | Stream    |
+| 端口 | 服务             | 类型       |
+| ---- | ---------------- | ---------- |
+| 8000 | HTTP Server      | 非流式回答 |
+| 9000 | gRPC Server      | 流式回答   |
+| 9001 | Websocket Server | 流式回答   |
+
+### 参数
+
+| 参数            | 说明     |
+| --------------- | -------- |
+| prompt          | 对话内容 |
+| conversation_id | 对话 ID  |
 
 ### HTTP
 
-HTTP server is using a FastAPI, you can visit [http://localhost:8000/docs](http://localhost:8000/docs) to SwaggerUI.
+HTTP 服务使用 FastAPI 实现, 你只需要访问 [http://localhost:8000/docs](http://localhost:8000/docs) 到 SwaggerUI 就知道怎么使用。
 
-or use the curl tool to request the interface
+或者你也可以使用 curl 工具等在终端发送请求：
 
 ```sh
 curl -X 'POST' \
@@ -64,14 +86,18 @@ curl -X 'POST' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-  "prompt": "Hello"
+  "prompt": "你好"
 }'
 ```
 
 ### gRPC
 
-Here is a sample program [grpc_client.py](https://github.com/jokerwho/chatgpt-easy-backend/blob/main/grpc_client.py)
+这里有一个 grpc_client 客户端示例： [grpc_client.py](https://github.com/jokerwho/chatgpt-easy-backend/blob/main/grpc_client.py)
+
+运行 `python3 grpc_client.py --url {grpc_url}` 即可
 
 ### Websocket
 
-Connect to `ws://localhost:9001` then send message.
+1.  连接到 `ws://localhost:9001`
+2.  按照约定格式发送消息，如要以 `conversation_id = 111222333` 提问，则发送 `<|ask|>$111222333$早上好`，即可收到回答
+3.  接收到 `<|end|>` 消息则表示该条对话回复完毕，可进行下一次提问
