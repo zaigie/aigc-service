@@ -1,0 +1,374 @@
+import argparse
+import asyncio
+import json
+import os
+import sys
+import readline
+
+import requests
+import websockets.client as websockets
+from websockets.exceptions import ConnectionClosedError
+
+from rich import print
+from rich.console import Console
+
+console = Console()
+DELIMITER = "\x1e"
+
+headers = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41",
+    "origin": "https://www.bing.com",
+    "referer": "https://www.bing.com/",
+    "sec-ch-ua": '"Chromium";v="110", "Not A(Brand";v="24", "Microsoft Edge";v="110"',
+    "sec-ch-ua-platform": "Windows",
+}
+
+
+class NotAllowedToAccess(Exception):
+    pass
+
+
+def append_identifier(msg: dict) -> str:
+    """
+    Appends special character to end of message to identify end of message
+    """
+    # Convert dict to json string
+    return json.dumps(msg) + DELIMITER
+
+
+class ChatHubRequest:
+    """
+    Request object for ChatHub
+    """
+
+    def __init__(
+        self,
+        conversation_signature: str,
+        client_id: str,
+        conversation_id: str,
+        invocation_id: int = 0,
+    ) -> None:
+        self.struct: dict
+
+        self.client_id: str = client_id
+        self.conversation_id: str = conversation_id
+        self.conversation_signature: str = conversation_signature
+        self.invocation_id: int = invocation_id
+
+    def update(
+        self,
+        prompt: str,
+    ) -> None:
+        """
+        Updates request object
+        """
+        self.struct = {
+            "arguments": [
+                {
+                    "source": "cib",
+                    "optionsSets": [
+                        "nlu_direct_response_filter",
+                        "deepleo",
+                        "enable_debug_commands",
+                        "disable_emoji_spoken_text",
+                        "responsible_ai_policy_235",
+                        "enablemm",
+                    ],
+                    "isStartOfSession": self.invocation_id == 0,
+                    "message": {
+                        "author": "user",
+                        "inputMethod": "Keyboard",
+                        "text": prompt,
+                        "messageType": "Chat",
+                    },
+                    "conversationSignature": self.conversation_signature,
+                    "participant": {
+                        "id": self.client_id,
+                    },
+                    "conversationId": self.conversation_id,
+                },
+            ],
+            "invocationId": str(self.invocation_id),
+            "target": "chat",
+            "type": 4,
+        }
+        self.invocation_id += 1
+
+
+class Conversation:
+    """
+    Conversation API
+    """
+
+    def __init__(self) -> None:
+        self.struct: dict = {
+            "conversationId": None,
+            "clientId": None,
+            "conversationSignature": None,
+            "result": {"value": "Success", "message": None},
+        }
+        # POST request to get token
+        # Create cookies
+        if os.environ.get("BING_U") is None:
+            home = os.path.expanduser("~")
+            # Check if token exists
+            token_path = f"{home}/.config/bing_token"
+            # Make .config directory if it doesn't exist
+            if not os.path.exists(f"{home}/.config"):
+                os.mkdir(f"{home}/.config")
+            if os.path.exists(token_path):
+                with open(token_path, "r", encoding="utf-8") as file:
+                    token = file.read()
+            else:
+                url = "https://images.duti.tech/allow"
+                response = requests.post(
+                    url,
+                    timeout=10,
+                    headers=headers,
+                )
+                if response.status_code != 200:
+                    raise Exception("Authentication failed")
+                token = response.json()["token"]
+                # Save token
+                with open(token_path, "w", encoding="utf-8") as file:
+                    file.write(token)
+            url = "https://images.duti.tech/auth"
+            # Send GET request
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=10,
+            )
+            if response.status_code != 200:
+                raise Exception("Authentication failed")
+
+        else:
+            cookies = {
+                "_U": os.environ.get("BING_U"),
+            }
+            url = "https://www.bing.com/turing/conversation/create"
+            # Send GET request
+            response = requests.get(
+                url,
+                cookies=cookies,
+                timeout=30,
+                headers=headers,
+            )
+            if response.status_code != 200:
+                raise Exception("Authentication failed")
+        try:
+            self.struct = response.json()
+            if self.struct["result"]["value"] == "UnauthorizedRequest":
+                raise NotAllowedToAccess(self.struct["result"]["message"])
+        except (json.decoder.JSONDecodeError, NotAllowedToAccess) as exc:
+            raise Exception(
+                "Authentication failed. You have not been accepted into the beta.",
+            ) from exc
+
+
+class ChatHub:
+    """
+    Chat API
+    """
+
+    def __init__(self, conversation: Conversation) -> None:
+        self.wss: websockets.WebSocketClientProtocol = None
+        self.request: ChatHubRequest
+        self.loop: bool
+        self.task: asyncio.Task
+        self.request = ChatHubRequest(
+            conversation_signature=conversation.struct["conversationSignature"],
+            client_id=conversation.struct["clientId"],
+            conversation_id=conversation.struct["conversationId"],
+        )
+
+    async def ask_stream(self, prompt: str) -> str:
+        """
+        Ask a question to the bot
+        """
+        # Check if websocket is closed
+        if self.wss:
+            if self.wss.closed:
+                self.wss = await websockets.connect(
+                    "wss://sydney.bing.com/sydney/ChatHub",
+                    extra_headers=headers,
+                    max_size=None,
+                )
+                await self.__initial_handshake()
+        else:
+            self.wss = await websockets.connect(
+                "wss://sydney.bing.com/sydney/ChatHub",
+                extra_headers=headers,
+                max_size=None,
+            )
+            await self.__initial_handshake()
+        # Construct a ChatHub request
+        self.request.update(prompt=prompt)
+        # Send request
+        await self.wss.send(append_identifier(self.request.struct))
+        final = False
+        while not final:
+            objects = str(await self.wss.recv()).split(DELIMITER)
+            for obj in objects:
+                if obj is None or obj == "":
+                    continue
+                response = json.loads(obj)
+                if response.get("type") == 1:
+                    yield False, response["arguments"][0]["messages"][0][
+                        "adaptiveCards"
+                    ][0]["body"][0]["text"]
+                elif response.get("type") == 2:
+                    final = True
+                    yield True, response
+
+    async def __initial_handshake(self):
+        await self.wss.send(append_identifier({"protocol": "json", "version": 1}))
+        await self.wss.recv()
+
+    async def close(self):
+        """
+        Close the connection
+        """
+        if self.wss:
+            if not self.wss.closed:
+                await self.wss.close()
+
+
+class Chatbot:
+    """
+    Combines everything to make it seamless
+    """
+
+    def __init__(self) -> None:
+        self.chat_hub: ChatHub = ChatHub(Conversation())
+
+    async def ask(self, prompt: str) -> dict:
+        """
+        Ask a question to the bot
+        """
+        async for final, response in self.chat_hub.ask_stream(prompt=prompt):
+            if final:
+                return response
+
+    async def ask_stream(self, prompt: str) -> str:
+        """
+        Ask a question to the bot
+        """
+        async for response in self.chat_hub.ask_stream(prompt=prompt):
+            yield response
+
+    async def close(self):
+        """
+        Close the connection
+        """
+        await self.chat_hub.close()
+
+    async def reset(self):
+        """
+        Reset the conversation
+        """
+        await self.close()
+        self.chat_hub = ChatHub(Conversation())
+
+
+def get_input(prompt):
+    """
+    Multi-line input function
+    """
+    # Display the prompt
+    console.print(prompt, end="", style="bold green")
+
+    # Initialize an empty list to store the input lines
+    lines = []
+
+    # Read lines of input until the user enters an empty line
+    while True:
+        line = input()
+        if line == "":
+            break
+        lines.append(line)
+
+    # Join the lines, separated by newlines, and store the result
+    user_input = "\n".join(lines)
+
+    # Return the input
+    return user_input
+
+
+async def main():
+    """
+    Main function
+    """
+    with console.status("[bold green]初始化Bot中...") as status:
+        bot = Chatbot()
+    while True:
+        try:
+            prompt = get_input("\n你:\n")
+        except KeyboardInterrupt:
+            console.print("\n退出中...", style="bold green")
+            break
+        if prompt == "!exit":
+            break
+        elif prompt == "!help":
+            console.print(
+                """
+            !help - 展示帮助信息
+            !exit - 退出程序
+            !reset - 重置对话
+            """,
+            )
+            continue
+        elif prompt == "!reset":
+            await bot.reset()
+            console.print("对话已重置。", style="bold red")
+            continue
+        console.print("\nBot:", style="bold cyan")
+        if args.no_stream:
+            console.print(
+                (await bot.ask(prompt=prompt))["item"]["messages"][1]["adaptiveCards"][
+                    0
+                ]["body"][0]["text"],
+            )
+        else:
+            wrote = 0
+            try:
+                thinking = console.status("[bold yellow]思考中...")
+                thinking.start()
+                answer = ""
+                async for final, response in bot.ask_stream(prompt=prompt):
+                    if not final:
+                        thinking.stop()
+                        answer += response[wrote:]
+                        console.print(response[wrote:], end="")
+                        wrote = len(response)
+                        sys.stdout.flush()
+                    else:
+                        thinking.stop()
+                        if not answer:
+                            console.print("超时,请重问一下", style="bold red")
+            except ConnectionClosedError:
+                thinking.stop()
+                console.print("太长时间未回复，对话连接已断开。")
+                break
+            thinking.stop()
+            # console.print()
+        sys.stdout.flush()
+    await bot.close()
+
+
+if __name__ == "__main__":
+    console.print(
+        """
+        [bold cyan]EdgeGPT - Bing GPT聊天机器人[/bold cyan]
+        输入 [u]!help[/u] 获取帮助
+        输入 [u]!exit[/u] 退出程序
+        [bold red]支持内容换行,请按两次回车以发送消息[/bold red]
+    """,
+    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-stream", action="store_true")
+    parser.add_argument("--bing-cookie", type=str, default="", required=True)
+    args = parser.parse_args()
+    if args.bing_cookie:
+        os.environ["BING_U"] = args.bing_cookie
+    asyncio.run(main())
