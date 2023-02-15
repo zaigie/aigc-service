@@ -349,7 +349,8 @@ async def main():
             except ConnectionClosedError:
                 thinking.stop()
                 console.print("太长时间未回复，对话连接已断开。")
-                break
+                with console.status("[bold green]初始化Bot中...") as status:
+                    bot = Chatbot()
             thinking.stop()
             # console.print()
         sys.stdout.flush()
