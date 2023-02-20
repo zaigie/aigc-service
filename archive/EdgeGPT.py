@@ -2,12 +2,15 @@ import argparse
 import asyncio
 import json
 import os
+import random
 import sys
 import readline
 
 import requests
+import tls_client
 import websockets.client as websockets
 from websockets.exceptions import ConnectionClosedError
+from typing import Generator, Optional
 
 from rich import print
 from rich.console import Console
@@ -15,12 +18,22 @@ from rich.console import Console
 console = Console()
 DELIMITER = "\x1e"
 
-headers = {
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41",
+# Generate random IP between range 13.104.0.0/14
+FORWARDED_IP = (
+    f"13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}"
+)
+
+
+HEADERS = {
+    "user-agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41"
+    ),
     "origin": "https://www.bing.com",
     "referer": "https://www.bing.com/",
     "sec-ch-ua": '"Chromium";v="110", "Not A(Brand";v="24", "Microsoft Edge";v="110"',
     "sec-ch-ua-platform": "Windows",
+    "x-forwarded-for": FORWARDED_IP,
 }
 
 
@@ -48,7 +61,7 @@ class ChatHubRequest:
         conversation_id: str,
         invocation_id: int = 0,
     ) -> None:
-        self.struct: dict
+        self.struct: dict = {}
 
         self.client_id: str = client_id
         self.conversation_id: str = conversation_id
@@ -100,62 +113,35 @@ class Conversation:
     Conversation API
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cookiePath: str = "") -> None:
         self.struct: dict = {
             "conversationId": None,
             "clientId": None,
             "conversationSignature": None,
             "result": {"value": "Success", "message": None},
         }
+        self.session = tls_client.Session(client_identifier="chrome_108")
         # POST request to get token
         # Create cookies
-        if os.environ.get("BING_U") is None:
-            home = os.path.expanduser("~")
-            # Check if token exists
-            token_path = f"{home}/.config/bing_token"
-            # Make .config directory if it doesn't exist
-            if not os.path.exists(f"{home}/.config"):
-                os.mkdir(f"{home}/.config")
-            if os.path.exists(token_path):
-                with open(token_path, "r", encoding="utf-8") as file:
-                    token = file.read()
-            else:
-                url = "https://images.duti.tech/allow"
-                response = requests.post(
-                    url,
-                    timeout=10,
-                    headers=headers,
-                )
-                if response.status_code != 200:
-                    raise Exception("Authentication failed")
-                token = response.json()["token"]
-                # Save token
-                with open(token_path, "w", encoding="utf-8") as file:
-                    file.write(token)
-            url = "https://images.duti.tech/auth"
-            # Send GET request
-            response = requests.get(
-                url,
-                headers=headers,
-                timeout=10,
-            )
-            if response.status_code != 200:
-                raise Exception("Authentication failed")
-
+        if cookiePath == "":
+            f = open(os.environ.get("COOKIE_FILE"), encoding="utf-8").read()
         else:
-            cookies = {
-                "_U": os.environ.get("BING_U"),
-            }
-            url = "https://www.bing.com/turing/conversation/create"
-            # Send GET request
-            response = requests.get(
-                url,
-                cookies=cookies,
-                timeout=30,
-                headers=headers,
-            )
-            if response.status_code != 200:
-                raise Exception("Authentication failed")
+            f = open(cookiePath, encoding="utf8").read()
+        cookie_file = json.loads(f)
+        for cookie in cookie_file:
+            self.session.cookies.set(cookie["name"], cookie["value"])
+        url = "https://edgeservices.bing.com/edgesvc/turing/conversation/create"
+        # Send GET request
+        response = requests.get(
+            url,
+            timeout=30,
+            headers=HEADERS,
+            allow_redirects=True,
+        )
+        if response.status_code != 200:
+            console.print(f"Status code: {response.status_code}")
+            console.print(response.text)
+            raise Exception("Authentication failed")
         try:
             self.struct = response.json()
             if self.struct["result"]["value"] == "UnauthorizedRequest":
@@ -172,7 +158,7 @@ class ChatHub:
     """
 
     def __init__(self, conversation: Conversation) -> None:
-        self.wss: websockets.WebSocketClientProtocol = None
+        self.wss: Optional[websockets.WebSocketClientProtocol] = None
         self.request: ChatHubRequest
         self.loop: bool
         self.task: asyncio.Task
@@ -182,7 +168,7 @@ class ChatHub:
             conversation_id=conversation.struct["conversationId"],
         )
 
-    async def ask_stream(self, prompt: str) -> str:
+    async def ask_stream(self, prompt: str) -> Generator[str, None, None]:
         """
         Ask a question to the bot
         """
@@ -191,14 +177,14 @@ class ChatHub:
             if self.wss.closed:
                 self.wss = await websockets.connect(
                     "wss://sydney.bing.com/sydney/ChatHub",
-                    extra_headers=headers,
+                    extra_headers=HEADERS,
                     max_size=None,
                 )
                 await self.__initial_handshake()
         else:
             self.wss = await websockets.connect(
                 "wss://sydney.bing.com/sydney/ChatHub",
-                extra_headers=headers,
+                extra_headers=HEADERS,
                 max_size=None,
             )
             await self.__initial_handshake()
@@ -239,8 +225,8 @@ class Chatbot:
     Combines everything to make it seamless
     """
 
-    def __init__(self) -> None:
-        self.chat_hub: ChatHub = ChatHub(Conversation())
+    def __init__(self, cookiePath: str = "") -> None:
+        self.chat_hub: ChatHub = ChatHub(Conversation(cookiePath))
 
     async def ask(self, prompt: str) -> dict:
         """
@@ -250,7 +236,7 @@ class Chatbot:
             if final:
                 return response
 
-    async def ask_stream(self, prompt: str) -> str:
+    async def ask_stream(self, prompt: str) -> Generator[str, None, None]:
         """
         Ask a question to the bot
         """
@@ -368,8 +354,10 @@ if __name__ == "__main__":
     )
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-stream", action="store_true")
-    parser.add_argument("--bing-cookie", type=str, default="", required=True)
+    parser.add_argument(
+        "--cookie-file", type=str, default="cookies.json", required=True
+    )
     args = parser.parse_args()
-    if args.bing_cookie:
-        os.environ["BING_U"] = args.bing_cookie
+    os.environ["COOKIE_FILE"] = args.cookie_file
+    args = parser.parse_args()
     asyncio.run(main())

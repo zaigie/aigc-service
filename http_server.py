@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from bot import Chatbot
+from revChatGPT.V1 import Chatbot
 
 app = FastAPI()
 
@@ -24,23 +24,41 @@ app.add_middleware(
     # max_age=1000
 )
 
-TEMPREATURE = 0.5
-API_KEY = os.environ.get("OPENAI_API_KEY")
-chatbot = Chatbot(api_key=API_KEY)
+CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
+PROXY = os.environ.get("PROXY", None)
+chatbot = Chatbot(
+    config={
+        "proxy": PROXY,
+        "access_token": CHATGPT_TOKEN,
+    }
+)
 
 
 class Ask(BaseModel):
     prompt: str
+    parent_id: str = None
 
 
 @app.post("/ask/{conversation_id}")
 def chat(conversation_id: str, ask: Ask):
     lines = [line for line in ask.prompt.splitlines() if line.strip()]
     user_input = "\n".join(lines)
+    prev_text = ""
+    response = {}
+    parent_id = ask.parent_id
+    if conversation_id == "new":
+        conversation_id = None
+        parent_id = None
     try:
-        response = chatbot.ask(
-            user_input, conversation_id=conversation_id, temperature=TEMPREATURE
-        )
+        for data in chatbot.ask(
+            user_input,
+            conversation_id=conversation_id,
+            parent_id=parent_id,
+            timeout=40,
+        ):
+            message = data["message"][len(prev_text) :]
+            prev_text = data["message"]
+            response = data
         return response
     except Exception as e:
         return {"response": "访问人数过多，请重试。", "detail": str(e)}

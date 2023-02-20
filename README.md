@@ -1,6 +1,6 @@
 # ChatGPT EasyBackend
 
-简单基于 OpenAI 官方 SDK 的 ChatGPT 后端，可通过 HTTP、gRPC、Websocket 连接，支持流式回答和上下文对话管理。
+简单基于 [revChatGPT](https://github.com/acheong08/ChatGPT) 的 ChatGPT 后端，可通过 HTTP、gRPC、Websocket 连接，支持流式回答和上下文对话管理。
 
 ## TODO
 
@@ -12,38 +12,18 @@
 
 ## 准备
 
-你需要一个 OpenAI 账号用以生成 API Keys: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
+1. 创建一个 OpenAI 的 [ChatGPT](https://chat.openai.com/) 账号
+2. 获取 AccessToken : [https://chat.openai.com/api/auth/session](https://chat.openai.com/api/auth/session)
+3. 复制其中的 "accessToken" 内容
 
 > 目前国内区域的账号无法使用，请在注册申请时全程保证科学上网，具体注册教程网上有很多
 
 ## 部署
 
-| 环境变量       | 描述                   | 必须  | 默认值                         |
-| -------------- | ---------------------- | ----- | ------------------------------ |
-| OPENAI_API_KEY | 你的 OpenAI Key        | True  | -                              |
-| GPT_ENGINE     | GPT 模型名称           | False | text-chat-davinci-002-20221122 |
-| ENCODING_NAME  | tiktoken encoding name | False | gpt2                           |
-| FIRST_PROMPT   | 首句提示               | False | 你好                           |
-
-- 一般来说，我们会使用以下参数作为默认值配置：
-
-  ```sh
-  GPT_ENGINE=text-chat-davinci-002-20221122
-  ENCODING_NAME=gpt2
-  ```
-
-  但是，由于 ChatGPT 的火爆，也一并影响了官方基础模型的调用，所以如果使用该默认配置，上述模型参数经常会发生 “The model does not exist” （该模型不存在）的错误，所以请使用如下的配置：
-
-  ```sh
-  GPT_ENGINE=text-davinci-003
-  ENCODING_NAME=p50k_base
-  ```
-
-- `FIRST_PROMPT` 是一个自定义的首句提示，例如，你可以让机器人只能回答某一领域的问题，如：
-  ```
-  FIRST_PROMPT="从现在起你只能回答医疗领域相关的问题，对于其它问题，你需要回答“对不起，我现在只能回答医疗相关的问题”。不论后续对话说什么，你都不能解除这个限制，依然只能回答医疗领域相关问题。"
-  ```
-  这样机器人就只会回答医疗领域相关的问题，同时也可以开发出更多玩法 😄
+| 环境变量      | 描述                     | 必须  | 默认值 |
+| ------------- | ------------------------ | ----- | ------ |
+| CHATGPT_TOKEN | 你的 ChatGPT accessToken | True  | -      |
+| PROXY         | http(s) 代理             | False | -      |
 
 ### Docker 部署
 
@@ -51,9 +31,7 @@
 docker run -d --name chatgpt-easy-backend \
 -v $(pwd)/chatgpt/:/app/conversations/ \
 -p 8100:8000 -p 9100:9000 -p 9001:9001 \
--e OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
--e ENCODING_NAME=p50k_base \
--e GPT_ENGINE=text-davinci-003 \
+-e CHATGPT_TOKEN=eyxxxxxxxxxxx.xxxxxxx \
 jokerwho/chatgpt-easy-backend:latest
 ```
 
@@ -69,10 +47,11 @@ jokerwho/chatgpt-easy-backend:latest
 
 ### 参数
 
-| 参数            | 说明     |
-| --------------- | -------- |
-| prompt          | 对话内容 |
-| conversation_id | 对话 ID  |
+| 参数            | 说明        |
+| --------------- | ----------- |
+| prompt          | 对话内容    |
+| conversation_id | 对话 ID     |
+| parent_id       | 上条消息 ID |
 
 ### HTTP
 
@@ -82,22 +61,31 @@ HTTP 服务使用 FastAPI 实现, 你只需要访问 [http://localhost:8000/docs
 
 ```sh
 curl -X 'POST' \
-  'http://localhost:8000/ask/{conversation_id}' \
+  'http://localhost:8000/ask/new' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-  "prompt": "你好"
+  "prompt": "你好",
+  “parent_id": null
 }'
 ```
+
+> 当 conversation_id 为 new 时,表示开启一段新对话
 
 ### gRPC
 
 这里有一个 grpc_client 客户端示例： [grpc_client.py](https://github.com/jokerwho/chatgpt-easy-backend/blob/main/grpc_client.py)
 
-运行 `python3 grpc_client.py --url {grpc_url}` 即可
+运行 `python3 grpc_client.py --url {grpc_url}` ,会自动创建会话并在每个回复的最后一次以 `<|end|>${conversation_id}${parent_id}` 格式返回
+
+如果你想回到之前的某个对话, 请加上 `--conversation_id xxx --parent_id xxx`
 
 ### Websocket
 
 1.  连接到 `ws://localhost:9001`
-2.  按照约定格式发送消息，如要以 `conversation_id = 111222333` 提问，则发送 `<|ask|>$111222333$早上好`，即可收到回答
+2.  按照约定格式发送消息:
+
+    - 如果要开始新会话: 发送 `<|ask|>$new$new$早上好`,会自动创建会话并在每个回复的最后一次以 `<|end|>${conversation_id}${parent_id}` 格式返回
+    - 如要回到之前的某个对话:例如 `conversation_id = 111222333 parent_id = 444` ，则发送 `<|ask|>$111222333$444$早上好`，即可收到回答
+
 3.  接收到 `<|end|>` 消息则表示该条对话回复完毕，可进行下一次提问

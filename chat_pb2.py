@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x04\x63hat\"5\n\naskrequest\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12\x17\n\x0f\x63onversation_id\x18\x02 \x01(\t\"\x1f\n\x0b\x61skresponse\x12\x10\n\x08response\x18\x01 \x01(\t26\n\x04\x43hat\x12.\n\x03\x41sk\x12\x10.chat.askrequest\x1a\x11.chat.askresponse\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x04\x63hat\"H\n\naskrequest\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12\x17\n\x0f\x63onversation_id\x18\x02 \x01(\t\x12\x11\n\tparent_id\x18\x03 \x01(\t\"\x1f\n\x0b\x61skresponse\x12\x10\n\x08response\x18\x01 \x01(\t26\n\x04\x43hat\x12.\n\x03\x41sk\x12\x10.chat.askrequest\x1a\x11.chat.askresponse\"\x00\x30\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'chat_pb2', globals())
@@ -21,9 +21,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _ASKREQUEST._serialized_start=20
-  _ASKREQUEST._serialized_end=73
-  _ASKRESPONSE._serialized_start=75
-  _ASKRESPONSE._serialized_end=106
-  _CHAT._serialized_start=108
-  _CHAT._serialized_end=162
+  _ASKREQUEST._serialized_end=92
+  _ASKRESPONSE._serialized_start=94
+  _ASKRESPONSE._serialized_end=125
+  _CHAT._serialized_start=127
+  _CHAT._serialized_end=181
 # @@protoc_insertion_point(module_scope)

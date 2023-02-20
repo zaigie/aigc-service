@@ -8,6 +8,7 @@ service Chat {
 message askrequest {
   string prompt = 1;
   string conversation_id = 2;
+  string parent_id = 3;
 }
 message askresponse{
   string response = 1;

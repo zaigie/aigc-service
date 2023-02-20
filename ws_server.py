@@ -2,12 +2,17 @@ import os
 import time
 from websocket_server import WebsocketServer
 
-from bot import Chatbot
+from revChatGPT.V1 import Chatbot
 
 RETRY = 3
-TEMPREATURE = 0.5
-API_KEY = os.environ.get("OPENAI_API_KEY")
-chatbot = Chatbot(api_key=API_KEY)
+CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
+PROXY = os.environ.get("PROXY", None)
+chatbot = Chatbot(
+    config={
+        "proxy": PROXY,
+        "access_token": CHATGPT_TOKEN,
+    }
+)
 
 
 def new_client(client, server):
@@ -22,34 +27,52 @@ def client_left(client, server):
 def message_received(client, server, message):
     # print("Client(%d) said: %s" % (client["id"], message))
     if not message.startswith("<|ask|>$"):
-        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$消息内容”为格式发送消息")
+        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$上条消息ID$消息内容”为格式发送消息")
         return
     conversation_id = message.split("$")[1]
     if not conversation_id:
-        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$消息内容”为格式发送消息")
+        server.send_message(client, "<|err|>$请使用“<|ask|>$会话ID$上条消息ID$消息内容”为格式发送消息")
         return
-    prompt = message.split("$")[2]
+    if conversation_id == "new":
+        conversation_id = None
+    parent_id = message.split("$")[2]
+    if parent_id == "new":
+        parent_id = None
+    prompt = message.split("$")[3]
     lines = [line for line in prompt.splitlines() if line.strip()]
     user_input = "\n".join(lines)
+    prev_text = ""
+    response = {}
     try:
-        for response in chatbot.ask_stream(
+        for data in chatbot.ask(
             user_input,
-            temperature=TEMPREATURE,
             conversation_id=conversation_id,
+            parent_id=parent_id,
+            timeout=40,
         ):
-            server.send_message(client, response)
-        server.send_message(client, "<|end|>")
+            message = data["message"][len(prev_text) :]
+            prev_text = data["message"]
+            response = data
+            server.send_message(client, message)
+        server.send_message(
+            client, f"<|end|>${response['conversation_id']}${response['parent_id']}"
+        )
     except Exception as e:
         count_retry = 0
         while count_retry < RETRY:
             try:
-                for response in chatbot.ask_stream(
+                for data in chatbot.ask(
                     user_input,
-                    temperature=TEMPREATURE,
                     conversation_id=conversation_id,
+                    timeout=40,
                 ):
-                    server.send_message(client, response)
-                server.send_message(client, "<|end|>")
+                    message = data["message"][len(prev_text) :]
+                    prev_text = data["message"]
+                    server.send_message(client, message)
+                server.send_message(
+                    client,
+                    f"<|end|>${response['conversation_id']}${response['parent_id']}",
+                )
                 return
             except Exception as e:
                 count_retry += 1

@@ -4,25 +4,41 @@ import grpc
 import chat_pb2
 import chat_pb2_grpc
 
-from bot import Chatbot
+from revChatGPT.V1 import Chatbot
 
-TEMPREATURE = 0.5
-
-API_KEY = os.environ.get("OPENAI_API_KEY")
-chatbot = Chatbot(api_key=API_KEY)
+CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
+PROXY = os.environ.get("PROXY", None)
+chatbot = Chatbot(
+    config={
+        "proxy": PROXY,
+        "access_token": CHATGPT_TOKEN,
+    }
+)
 
 
 class Chat(chat_pb2_grpc.ChatServicer):
     def Ask(self, request, context):
         prompt = request.prompt
         conversation_id = request.conversation_id
+        parent_id = request.parent_id
         lines = [line for line in prompt.splitlines() if line.strip()]
         user_input = "\n".join(lines)
+        prev_text = ""
+        response = {}
         try:
-            for response in chatbot.ask_stream(
-                user_input, temperature=TEMPREATURE, conversation_id=conversation_id
+            for data in chatbot.ask(
+                user_input,
+                conversation_id=conversation_id,
+                parent_id=parent_id,
+                timeout=40,
             ):
-                yield chat_pb2.askresponse(response=response)
+                message = data["message"][len(prev_text) :]
+                prev_text = data["message"]
+                response = data
+                yield chat_pb2.askresponse(response=message)
+            yield chat_pb2.askresponse(
+                response=f"<|end|>${response['conversation_id']}${response['parent_id']}"
+            )
             # print(context.is_active())
         except Exception as e:
             yield chat_pb2.askresponse(response="<|err|>")
