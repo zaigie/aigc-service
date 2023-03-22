@@ -27,12 +27,12 @@ class OpenAIStub(object):
         self.StreamCompletion = channel.unary_stream(
             "/aigc.OpenAI/StreamCompletion",
             request_serializer=aigc__pb2.OpenAICreateCompletionRequest.SerializeToString,
-            response_deserializer=aigc__pb2.OpenAICompletionResponse.FromString,
+            response_deserializer=aigc__pb2.OpenAIStreamCompletionResponse.FromString,
         )
         self.StreamChat = channel.unary_stream(
             "/aigc.OpenAI/StreamChat",
             request_serializer=aigc__pb2.OpenAICreateChatRequest.SerializeToString,
-            response_deserializer=aigc__pb2.OpenAIChatResponse.FromString,
+            response_deserializer=aigc__pb2.OpenAIStreamChatResponse.FromString,
         )
 
 
@@ -79,12 +79,12 @@ def add_OpenAIServicer_to_server(servicer, server):
         "StreamCompletion": grpc.unary_stream_rpc_method_handler(
             servicer.StreamCompletion,
             request_deserializer=aigc__pb2.OpenAICreateCompletionRequest.FromString,
-            response_serializer=aigc__pb2.OpenAICompletionResponse.SerializeToString,
+            response_serializer=aigc__pb2.OpenAIStreamCompletionResponse.SerializeToString,
         ),
         "StreamChat": grpc.unary_stream_rpc_method_handler(
             servicer.StreamChat,
             request_deserializer=aigc__pb2.OpenAICreateChatRequest.FromString,
-            response_serializer=aigc__pb2.OpenAIChatResponse.SerializeToString,
+            response_serializer=aigc__pb2.OpenAIStreamChatResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -173,7 +173,7 @@ class OpenAI(object):
             target,
             "/aigc.OpenAI/StreamCompletion",
             aigc__pb2.OpenAICreateCompletionRequest.SerializeToString,
-            aigc__pb2.OpenAICompletionResponse.FromString,
+            aigc__pb2.OpenAIStreamCompletionResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -202,7 +202,7 @@ class OpenAI(object):
             target,
             "/aigc.OpenAI/StreamChat",
             aigc__pb2.OpenAICreateChatRequest.SerializeToString,
-            aigc__pb2.OpenAIChatResponse.FromString,
+            aigc__pb2.OpenAIStreamChatResponse.FromString,
             options,
             channel_credentials,
             insecure,

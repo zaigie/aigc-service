@@ -62,10 +62,10 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
             top_p=round(top_p, 1),
             stream=True,
         ):
-            response = aigc_pb2.OpenAICompletionResponse(
+            response = aigc_pb2.OpenAIStreamCompletionResponse(
                 id=res["id"],
                 answer=res["choices"][0]["text"],
-                usage=0,  # HACK: change proto file
+                finish_reason=res["choices"][0]["finish_reason"],
             )
             yield response
 
@@ -86,10 +86,8 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
             top_p=round(top_p, 1),
             stream=True,
         ):
-            response = aigc_pb2.OpenAIChatResponse(
-                id=res["id"],
-                message=res["choices"][0]["delta"],
-                usage=0,  # HACK: change proto file
+            response = aigc_pb2.OpenAIStreamChatResponse(
+                id=res["id"], delta=res["choices"][0]["delta"]
             )
             yield response
 

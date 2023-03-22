@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\naigc.proto\x12\x04\x61igc\"g\n\x1dOpenAICreateCompletionRequest\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12\x12\n\nmax_tokens\x18\x02 \x01(\r\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\x12\r\n\x05top_p\x18\x04 \x01(\x02\"E\n\x18OpenAICompletionResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06\x61nswer\x18\x02 \x01(\t\x12\r\n\x05usage\x18\x03 \x01(\r\"y\n\x17OpenAICreateChatRequest\x12&\n\x08messages\x18\x01 \x03(\x0b\x32\x14.aigc.RequestMessage\x12\x12\n\nmax_tokens\x18\x02 \x01(\r\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\x12\r\n\x05top_p\x18\x04 \x01(\x02\"W\n\x12OpenAIChatResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12&\n\x07message\x18\x02 \x01(\x0b\x32\x15.aigc.ResponseMessage\x12\r\n\x05usage\x18\x03 \x01(\r\"w\n\x0eRequestMessage\x12\'\n\x04role\x18\x01 \x01(\x0e\x32\x19.aigc.RequestMessage.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"+\n\x04Role\x12\n\n\x06system\x10\x00\x12\x08\n\x04user\x10\x01\x12\r\n\tassistant\x10\x02\"\x90\x01\n\x0fResponseMessage\x12(\n\x04role\x18\x01 \x01(\x0e\x32\x1a.aigc.ResponseMessage.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t\"+\n\x04Role\x12\n\n\x06system\x10\x00\x12\x08\n\x04user\x10\x01\x12\r\n\tassistant\x10\x02\x32\xc8\x02\n\x06OpenAI\x12S\n\nCompletion\x12#.aigc.OpenAICreateCompletionRequest\x1a\x1e.aigc.OpenAICompletionResponse\"\x00\x12\x41\n\x04\x43hat\x12\x1d.aigc.OpenAICreateChatRequest\x1a\x18.aigc.OpenAIChatResponse\"\x00\x12[\n\x10StreamCompletion\x12#.aigc.OpenAICreateCompletionRequest\x1a\x1e.aigc.OpenAICompletionResponse\"\x00\x30\x01\x12I\n\nStreamChat\x12\x1d.aigc.OpenAICreateChatRequest\x1a\x18.aigc.OpenAIChatResponse\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\naigc.proto\x12\x04\x61igc\"g\n\x1dOpenAICreateCompletionRequest\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12\x12\n\nmax_tokens\x18\x02 \x01(\r\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\x12\r\n\x05top_p\x18\x04 \x01(\x02\"E\n\x18OpenAICompletionResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06\x61nswer\x18\x02 \x01(\t\x12\r\n\x05usage\x18\x03 \x01(\r\"y\n\x17OpenAICreateChatRequest\x12&\n\x08messages\x18\x01 \x03(\x0b\x32\x14.aigc.RequestMessage\x12\x12\n\nmax_tokens\x18\x02 \x01(\r\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\x12\r\n\x05top_p\x18\x04 \x01(\x02\"W\n\x12OpenAIChatResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12&\n\x07message\x18\x02 \x01(\x0b\x32\x15.aigc.ResponseMessage\x12\r\n\x05usage\x18\x03 \x01(\r\"S\n\x1eOpenAIStreamCompletionResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06\x61nswer\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t\"L\n\x18OpenAIStreamChatResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12$\n\x05\x64\x65lta\x18\x02 \x01(\x0b\x32\x15.aigc.ResponseMessage\"w\n\x0eRequestMessage\x12\'\n\x04role\x18\x01 \x01(\x0e\x32\x19.aigc.RequestMessage.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"+\n\x04Role\x12\n\n\x06system\x10\x00\x12\x08\n\x04user\x10\x01\x12\r\n\tassistant\x10\x02\"\x90\x01\n\x0fResponseMessage\x12(\n\x04role\x18\x01 \x01(\x0e\x32\x1a.aigc.ResponseMessage.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t\"+\n\x04Role\x12\n\n\x06system\x10\x00\x12\x08\n\x04user\x10\x01\x12\r\n\tassistant\x10\x02\x32\xd4\x02\n\x06OpenAI\x12S\n\nCompletion\x12#.aigc.OpenAICreateCompletionRequest\x1a\x1e.aigc.OpenAICompletionResponse\"\x00\x12\x41\n\x04\x43hat\x12\x1d.aigc.OpenAICreateChatRequest\x1a\x18.aigc.OpenAIChatResponse\"\x00\x12\x61\n\x10StreamCompletion\x12#.aigc.OpenAICreateCompletionRequest\x1a$.aigc.OpenAIStreamCompletionResponse\"\x00\x30\x01\x12O\n\nStreamChat\x12\x1d.aigc.OpenAICreateChatRequest\x1a\x1e.aigc.OpenAIStreamChatResponse\"\x00\x30\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'aigc_pb2', globals())
@@ -28,14 +28,18 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _OPENAICREATECHATREQUEST._serialized_end=317
   _OPENAICHATRESPONSE._serialized_start=319
   _OPENAICHATRESPONSE._serialized_end=406
-  _REQUESTMESSAGE._serialized_start=408
-  _REQUESTMESSAGE._serialized_end=527
-  _REQUESTMESSAGE_ROLE._serialized_start=484
-  _REQUESTMESSAGE_ROLE._serialized_end=527
-  _RESPONSEMESSAGE._serialized_start=530
-  _RESPONSEMESSAGE._serialized_end=674
-  _RESPONSEMESSAGE_ROLE._serialized_start=484
-  _RESPONSEMESSAGE_ROLE._serialized_end=527
-  _OPENAI._serialized_start=677
-  _OPENAI._serialized_end=1005
+  _OPENAISTREAMCOMPLETIONRESPONSE._serialized_start=408
+  _OPENAISTREAMCOMPLETIONRESPONSE._serialized_end=491
+  _OPENAISTREAMCHATRESPONSE._serialized_start=493
+  _OPENAISTREAMCHATRESPONSE._serialized_end=569
+  _REQUESTMESSAGE._serialized_start=571
+  _REQUESTMESSAGE._serialized_end=690
+  _REQUESTMESSAGE_ROLE._serialized_start=647
+  _REQUESTMESSAGE_ROLE._serialized_end=690
+  _RESPONSEMESSAGE._serialized_start=693
+  _RESPONSEMESSAGE._serialized_end=837
+  _RESPONSEMESSAGE_ROLE._serialized_start=647
+  _RESPONSEMESSAGE_ROLE._serialized_end=690
+  _OPENAI._serialized_start=840
+  _OPENAI._serialized_end=1180
 # @@protoc_insertion_point(module_scope)

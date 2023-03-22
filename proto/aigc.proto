@@ -5,8 +5,8 @@ package aigc;
 service OpenAI {
   rpc Completion(OpenAICreateCompletionRequest) returns (OpenAICompletionResponse){}
   rpc Chat(OpenAICreateChatRequest) returns (OpenAIChatResponse){}
-  rpc StreamCompletion(OpenAICreateCompletionRequest) returns (stream OpenAICompletionResponse){}
-  rpc StreamChat(OpenAICreateChatRequest) returns (stream OpenAIChatResponse){}
+  rpc StreamCompletion(OpenAICreateCompletionRequest) returns (stream OpenAIStreamCompletionResponse){}
+  rpc StreamChat(OpenAICreateChatRequest) returns (stream OpenAIStreamChatResponse){}
 }
 
 message OpenAICreateCompletionRequest {
@@ -33,6 +33,17 @@ message OpenAIChatResponse {
   string id = 1;
   ResponseMessage message = 2;
   uint32 usage = 3;
+}
+
+message OpenAIStreamCompletionResponse {
+  string id = 1;
+  string answer = 2;
+  string finish_reason = 3;
+}
+
+message OpenAIStreamChatResponse {
+  string id = 1;
+  ResponseMessage delta = 2;
 }
 
 message RequestMessage {
