@@ -23,7 +23,7 @@ message OpenAICompletionResponse {
 }
 
 message OpenAICreateChatRequest {
-  repeated RequestMessage messages = 1;
+  repeated Message messages = 1;
   uint32 max_tokens = 2;
   float temperature = 3;
   float top_p = 4;
@@ -31,7 +31,7 @@ message OpenAICreateChatRequest {
 
 message OpenAIChatResponse {
   string id = 1;
-  ResponseMessage message = 2;
+  Message message = 2;
   uint32 usage = 3;
 }
 
@@ -43,10 +43,11 @@ message OpenAIStreamCompletionResponse {
 
 message OpenAIStreamChatResponse {
   string id = 1;
-  ResponseMessage delta = 2;
+  Message delta = 2;
+  string finish_reason = 3;
 }
 
-message RequestMessage {
+message Message {
   enum Role {
       system = 0;
       user = 1;
@@ -54,15 +55,4 @@ message RequestMessage {
   }
   Role role = 1;
   string content = 2;
-}
-
-message ResponseMessage {
-  enum Role {
-    system = 0;
-    user = 1;
-    assistant = 2;
-  }
-  Role role = 1;
-  string content = 2;
-  string finish_reason = 3;
 }

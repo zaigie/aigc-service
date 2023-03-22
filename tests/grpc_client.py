@@ -16,8 +16,8 @@ def run_completion_stub(stub):
 
 def run_chat_stub(stub):
     messages = [
-        aigc_pb2.RequestMessage(role="system", content="你是一个测试员"),
-        aigc_pb2.RequestMessage(role="user", content="如果正常，请回复啊啊啊成功了"),
+        aigc_pb2.Message(role="system", content="你是一个测试员"),
+        aigc_pb2.Message(role="user", content="如果正常，请回复啊啊啊成功了"),
     ]
     request = aigc_pb2.OpenAICreateChatRequest(
         messages=messages, max_tokens=50, temperature=0.8, top_p=0.9
@@ -37,8 +37,8 @@ def run_stream_completion_stub(stub):
 
 def run_stream_chat_stub(stub):
     messages = [
-        aigc_pb2.RequestMessage(role="system", content="你是一个测试员"),
-        aigc_pb2.RequestMessage(role="user", content="如果正常，请回复啊啊啊成功了"),
+        aigc_pb2.Message(role="system", content="你是一个测试员"),
+        aigc_pb2.Message(role="user", content="如果正常，请回复啊啊啊成功了"),
     ]
     request = aigc_pb2.OpenAICreateChatRequest(
         messages=messages, max_tokens=50, temperature=0.8, top_p=0.9

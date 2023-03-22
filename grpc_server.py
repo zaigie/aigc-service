@@ -87,7 +87,9 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
             stream=True,
         ):
             response = aigc_pb2.OpenAIStreamChatResponse(
-                id=res["id"], delta=res["choices"][0]["delta"]
+                id=res["id"],
+                delta=res["choices"][0]["delta"],
+                finish_reason=res["choices"][0]["finish_reason"],
             )
             yield response
 
