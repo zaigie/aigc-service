@@ -1,6 +1,5 @@
 import os
 import openai
-from rich import print
 
 
 class OpenAIClient:
