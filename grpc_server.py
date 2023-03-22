@@ -1,54 +1,105 @@
-from concurrent import futures
-import os
 import grpc
-import chat_pb2
-import chat_pb2_grpc
+from concurrent import futures
+from proto import aigc_pb2
+from proto import aigc_pb2_grpc
 
-from revChatGPT.V1 import Chatbot
-
-CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
-PROXY = os.environ.get("PROXY", None)
-chatbot = Chatbot(
-    config={
-        "proxy": PROXY,
-        "access_token": CHATGPT_TOKEN,
-    }
-)
+from bots._openai import OpenAIClient
 
 
-class Chat(chat_pb2_grpc.ChatServicer):
-    def Ask(self, request, context):
+class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
+    def Completion(self, request, context):
         prompt = request.prompt
-        conversation_id = request.conversation_id
-        parent_id = request.parent_id
-        lines = [line for line in prompt.splitlines() if line.strip()]
-        user_input = "\n".join(lines)
-        prev_text = ""
-        response = {}
-        try:
-            for data in chatbot.ask(
-                user_input,
-                conversation_id=conversation_id,
-                parent_id=parent_id,
-                timeout=40,
-            ):
-                message = data["message"][len(prev_text) :]
-                prev_text = data["message"]
-                response = data
-                yield chat_pb2.askresponse(response=message)
-            yield chat_pb2.askresponse(
-                response=f"<|end|>${response['conversation_id']}${response['parent_id']}"
+        max_tokens = request.max_tokens or 2000
+        temperature = request.temperature or 1.0
+        top_p = request.top_p or 0.8
+        openai_client = OpenAIClient()
+        res = openai_client.completion(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=round(temperature, 1),
+            top_p=round(top_p, 1),
+        )
+        response = aigc_pb2.OpenAICompletionResponse(
+            id=res["id"],
+            answer=res["choices"][0]["text"],
+            usage=res["usage"]["total_tokens"],
+        )
+        return response
+
+    def Chat(self, request, context):
+        messages = request.messages
+        max_tokens = request.max_tokens or 2000
+        temperature = request.temperature or 0.7
+        top_p = request.top_p or 0.8
+        character = {0: "system", 1: "user", 2: "assistant"}
+        messages = [
+            {"role": character[msg.role], "content": msg.content} for msg in messages
+        ]
+        openai_client = OpenAIClient()
+        res = openai_client.chat_completion(
+            messages,
+            max_tokens=max_tokens,
+            temperature=round(temperature, 1),
+            top_p=round(top_p, 1),
+        )
+        response = aigc_pb2.OpenAIChatResponse(
+            id=res["id"],
+            message=res["choices"][0]["message"],
+            usage=res["usage"]["total_tokens"],
+        )
+        return response
+
+    def StreamCompletion(self, request, context):
+        prompt = request.prompt
+        max_tokens = request.max_tokens or 2000
+        temperature = request.temperature or 1.0
+        top_p = request.top_p or 0.8
+        openai_client = OpenAIClient()
+        for res in openai_client.completion(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=round(temperature, 1),
+            top_p=round(top_p, 1),
+            stream=True,
+        ):
+            response = aigc_pb2.OpenAIStreamCompletionResponse(
+                id=res["id"],
+                answer=res["choices"][0]["text"],
+                finish_reason=res["choices"][0]["finish_reason"],
             )
-            # print(context.is_active())
-        except Exception as e:
-            yield chat_pb2.askresponse(response="<|err|>")
+            yield response
+
+    def StreamChat(self, request, context):
+        messages = request.messages
+        max_tokens = request.max_tokens or 2000
+        temperature = request.temperature or 0.7
+        top_p = request.top_p or 0.8
+        character = {0: "system", 1: "user", 2: "assistant"}
+        messages = [
+            {"role": character[msg.role], "content": msg.content} for msg in messages
+        ]
+        openai_client = OpenAIClient()
+        for res in openai_client.chat_completion(
+            messages,
+            max_tokens=max_tokens,
+            temperature=round(temperature, 1),
+            top_p=round(top_p, 1),
+            stream=True,
+        ):
+            response = aigc_pb2.OpenAIStreamChatResponse(
+                id=res["id"],
+                delta=res["choices"][0]["delta"],
+                finish_reason=res["choices"][0]["finish_reason"],
+            )
+            yield response
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    chat_pb2_grpc.add_ChatServicer_to_server(Chat(), server)
+    aigc_pb2_grpc.add_OpenAIServicer_to_server(OpenAIServer(), server)
     server.add_insecure_port("[::]:9000")
     server.start()
+    print("Server started at [::]:9000")
     server.wait_for_termination()
 
 
