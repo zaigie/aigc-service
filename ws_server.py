@@ -5,12 +5,12 @@ from websocket_server import WebsocketServer
 from revChatGPT.V1 import Chatbot
 
 RETRY = 3
-CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
+API_KEY = os.environ.get("API_KEY", None)
 PROXY = os.environ.get("PROXY", None)
 chatbot = Chatbot(
     config={
         "proxy": PROXY,
-        "access_token": CHATGPT_TOKEN,
+        "access_token": API_KEY,
     }
 )
 

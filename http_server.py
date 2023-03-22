@@ -1,11 +1,11 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from revChatGPT.V1 import Chatbot
+from apis import openai_router
 
-app = FastAPI()
+app = FastAPI(title="AIGC Micro Service", version="0.0.1")
+app.include_router(openai_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,49 +24,7 @@ app.add_middleware(
     # max_age=1000
 )
 
-CHATGPT_TOKEN = os.environ.get("CHATGPT_TOKEN", None)
-PROXY = os.environ.get("PROXY", None)
-chatbot = Chatbot(
-    config={
-        "proxy": PROXY,
-        "access_token": CHATGPT_TOKEN,
-    }
-)
-
-
-class Ask(BaseModel):
-    prompt: str
-    parent_id: str = None
-
-
-@app.post("/ask/{conversation_id}")
-def chat(conversation_id: str, ask: Ask):
-    lines = [line for line in ask.prompt.splitlines() if line.strip()]
-    user_input = "\n".join(lines)
-    prev_text = ""
-    response = {}
-    parent_id = ask.parent_id
-    if conversation_id == "new":
-        conversation_id = None
-        parent_id = None
-    try:
-        for data in chatbot.ask(
-            user_input,
-            conversation_id=conversation_id,
-            parent_id=parent_id,
-            timeout=40,
-        ):
-            message = data["message"][len(prev_text) :]
-            prev_text = data["message"]
-            response = data
-        return response
-    except Exception as e:
-        return {"response": "访问人数过多，请重试。", "detail": str(e)}
-
-
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        "http_server:app", host="0.0.0.0", port=8000, reload=False, env_file=".env"
-    )
+    uvicorn.run("http_server:app", host="0.0.0.0", port=8000)

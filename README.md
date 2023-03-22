@@ -20,10 +20,10 @@
 
 ## 部署
 
-| 环境变量      | 描述                     | 必须  | 默认值 |
-| ------------- | ------------------------ | ----- | ------ |
-| CHATGPT_TOKEN | 你的 ChatGPT accessToken | True  | -      |
-| PROXY         | http(s) 代理             | False | -      |
+| 环境变量 | 描述                     | 必须  | 默认值 |
+| -------- | ------------------------ | ----- | ------ |
+| API_KEY  | 你的 ChatGPT accessToken | True  | -      |
+| PROXY    | http(s) 代理             | False | -      |
 
 ### Docker 部署
 
@@ -31,7 +31,7 @@
 docker run -d --name chatgpt-easy-backend \
 -v $(pwd)/chatgpt/:/app/conversations/ \
 -p 8100:8000 -p 9100:9000 -p 9001:9001 \
--e CHATGPT_TOKEN=eyxxxxxxxxxxx.xxxxxxx \
+-e API_KEY=eyxxxxxxxxxxx.xxxxxxx \
 jokerwho/chatgpt-easy-backend:latest
 ```
 

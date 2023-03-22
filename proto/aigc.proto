@@ -1,0 +1,57 @@
+syntax = "proto3";
+package aigc;
+
+
+service OpenAI {
+  rpc Completion(OpenAICreateCompletionRequest) returns (OpenAICompletionResponse){}
+  rpc Chat(OpenAICreateChatRequest) returns (OpenAIChatResponse){}
+  rpc StreamCompletion(OpenAICreateCompletionRequest) returns (stream OpenAICompletionResponse){}
+  rpc StreamChat(OpenAICreateChatRequest) returns (stream OpenAIChatResponse){}
+}
+
+message OpenAICreateCompletionRequest {
+  string prompt = 1;
+  uint32 max_tokens = 2;
+  float temperature = 3;
+  float top_p = 4;
+}
+
+message OpenAICompletionResponse {
+  string id = 1;
+  string answer = 2;
+  uint32 usage = 3;
+}
+
+message OpenAICreateChatRequest {
+  repeated RequestMessage messages = 1;
+  uint32 max_tokens = 2;
+  float temperature = 3;
+  float top_p = 4;
+}
+
+message OpenAIChatResponse {
+  string id = 1;
+  ResponseMessage message = 2;
+  uint32 usage = 3;
+}
+
+message RequestMessage {
+  enum Role {
+      system = 0;
+      user = 1;
+      assistant = 2;
+  }
+  Role role = 1;
+  string content = 2;
+}
+
+message ResponseMessage {
+  enum Role {
+    system = 0;
+    user = 1;
+    assistant = 2;
+  }
+  Role role = 1;
+  string content = 2;
+  string finish_reason = 3;
+}
