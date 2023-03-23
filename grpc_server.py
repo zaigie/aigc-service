@@ -4,12 +4,13 @@ from proto import aigc_pb2
 from proto import aigc_pb2_grpc
 
 from bots._openai import OpenAIClient
+from utils.tiks import get_openai_chat_tokens, get_openai_completion_tokens
 
 
 class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
     def Completion(self, request, context):
         prompt = request.prompt
-        max_tokens = request.max_tokens or 2000
+        max_tokens = request.max_tokens or (4096 - get_openai_completion_tokens(prompt))
         temperature = request.temperature or 1.0
         top_p = request.top_p or 0.8
         openai_client = OpenAIClient()
@@ -28,13 +29,13 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
 
     def Chat(self, request, context):
         messages = request.messages
-        max_tokens = request.max_tokens or 2000
-        temperature = request.temperature or 0.7
-        top_p = request.top_p or 0.8
         character = {0: "system", 1: "user", 2: "assistant"}
         messages = [
             {"role": character[msg.role], "content": msg.content} for msg in messages
         ]
+        max_tokens = request.max_tokens or (4096 - get_openai_chat_tokens(messages))
+        temperature = request.temperature or 0.7
+        top_p = request.top_p or 0.8
         openai_client = OpenAIClient()
         res = openai_client.chat_completion(
             messages,
@@ -51,7 +52,7 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
 
     def StreamCompletion(self, request, context):
         prompt = request.prompt
-        max_tokens = request.max_tokens or 2000
+        max_tokens = request.max_tokens or (4096 - get_openai_completion_tokens(prompt))
         temperature = request.temperature or 1.0
         top_p = request.top_p or 0.8
         openai_client = OpenAIClient()
@@ -71,13 +72,13 @@ class OpenAIServer(aigc_pb2_grpc.OpenAIServicer):
 
     def StreamChat(self, request, context):
         messages = request.messages
-        max_tokens = request.max_tokens or 2000
-        temperature = request.temperature or 0.7
-        top_p = request.top_p or 0.8
         character = {0: "system", 1: "user", 2: "assistant"}
         messages = [
             {"role": character[msg.role], "content": msg.content} for msg in messages
         ]
+        max_tokens = request.max_tokens or (4096 - get_openai_chat_tokens(messages))
+        temperature = request.temperature or 0.7
+        top_p = request.top_p or 0.8
         openai_client = OpenAIClient()
         for res in openai_client.chat_completion(
             messages,
