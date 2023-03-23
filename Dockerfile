@@ -6,9 +6,10 @@ ENV TZ=Asia/Shanghai
 RUN mkdir /app
 WORKDIR /app
 
-RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+# RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
 RUN apt update && apt install make gcc g++ tzdata -y
-RUN python -m pip install --upgrade pip -i https://pypi.douban.com/simple
+# RUN python -m pip install --upgrade pip -i https://pypi.douban.com/simple
+RUN python -m pip install --upgrade pip
 
 COPY requirements.txt /app
 RUN cd /app && pip install -r requirements.txt
